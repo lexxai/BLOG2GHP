@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from urllib.parse import urlsplit
 from pathlib import Path
 
-from  httpx import Client
+from httpx import Client
 
 from .config import BASE_DIR, IMG_DIR
 
 logger = logging.getLogger(__name__)
+
+
+def str_hash(data: str) -> str:
+    return hashlib.blake2b(data.encode()).hexdigest()[:16]
 
 
 def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
@@ -18,16 +23,19 @@ def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
     - Prefer the basename of the path when it has an extension.
     - Otherwise, use a short hash of the URL with a fallback extension.
     """
-    path = Path(url.split("?", 1)[0])
-    name = path.name
-    if name and "." in name:
-        return name
 
-    digest = hashlib.blake2b(url.encode("utf-8")).hexdigest()[:16]
-    return f"img_{digest}{fallback_ext}"
+    urlparts = urlsplit(url)
+    path = urlparts.path
+    image_path = Path(path)
+    digest_parent = str_hash(str(image_path.parent))
+    # logger.debug(image_path)
+    image_ext = image_path.suffix or fallback_ext
+    filename = image_path.with_suffix(image_ext.lower())
+    digest_name = str_hash(filename.name)
+    return f"{digest_parent}-{filename.with_stem(digest_name).name}"
 
 
-def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Client|None = None) -> str:
+def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Client | None = None) -> str | None:
     """
     Download an image and return the web path relative to the site root.
 
@@ -38,6 +46,7 @@ def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Cli
     """
     if client is None:
         assert ValueError("client must be provided")
+        return
 
     try:
         filename = _stable_filename_from_url(img_url)
