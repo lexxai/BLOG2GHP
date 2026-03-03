@@ -11,7 +11,7 @@ import httpx
 from lxml import etree  # type: ignore
 
 from blog_sync.config import RSS_URL, ensure_directories
-from blog_sync.client import get_client
+from blog_sync.client import http_connection
 from blog_sync.posts import (
     build_frontmatter,
     generate_post_filename,
@@ -168,7 +168,7 @@ def main() -> None:
     parser = build_arg_parser()
     args = parser.parse_args()
     try:
-        with get_client() as client:
+        with http_connection.get_client() as client:
             process_sync(
                 dest=args.dest,
                 limit=args.limit,
