@@ -27,18 +27,24 @@ jobs:
       LOG_LEVEL: INFO
 
     steps:
+      - name: Git settings
+        run: |
+          git config set advice.defaultBranchName false
+
       # 1. Clone your code from BLOG2GHP (where sync_blog.py lives)
-      - name: Clone Project Repository (BLOG2GHP)
+      - name: Clone Project Repository (BLOG2GHP) [project-src]
         uses: actions/checkout@v4
         with:
           repository: lexxai/BLOG2GHP
           path: project-src
 
       # 2. Clone the TARGET Pages repo (lexxai) to push changes here
-      - name: Clone Target Pages Repository
+      - name: Clone Target Pages Repo (lexxai) [publish-dir]
         uses: actions/checkout@v4
         with:
+          repository: lexxai/lexxai
           ref: gh-pages
+          path: publish-dir
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -53,15 +59,16 @@ jobs:
       
       # 5. Run the sync script
       - name: Run blog sync
-        if: always() # Always run manual trigger, scheduled already filtered
+        if: always() 
         run: |
           echo "Running sync with MAX_RESULTS=${MAX_RESULTS} in in project-src"
           cd project-src
-          python sync_blog.py --verbose || true
+          python sync_blog.py --verbose --dest ../publish-dir 
 
       # 6. Commit changes TO THE TARGET REPO (lexxai)
       - name: Commit changes
-        if: always() && github.event_name == 'schedule'
+        working-directory: publish-dir
+        if: always()
         run: |
           if git diff --quiet; then
             echo "No changes to commit."
@@ -76,6 +83,7 @@ jobs:
 
         # 7. Push changes to the Pages branch
       - name: Push changes to Pages Repo
+        working-directory: publish-dir
         if: success()
         env:
           GITHUB_TOKEN: ${{ secrets.PAGES_PUSH_TOKEN }}
