@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Mapping, Sequence
+from typing import Sequence
 
 from .config import BASE_DIR, POSTS_DIR
 
@@ -90,4 +90,3 @@ __all__ = [
     "build_frontmatter",
     "write_post",
 ]
-

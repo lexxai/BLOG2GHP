@@ -3,12 +3,14 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 from typing import List, Sequence
 
 import httpx
 from lxml import etree
 
 from blog_sync.config import RSS_URL, ensure_directories
+from blog_sync.downloader import get_client
 from blog_sync.posts import (
     build_frontmatter,
     generate_post_filename,
@@ -16,6 +18,8 @@ from blog_sync.posts import (
 )
 from blog_sync.transform import transform_entry_html
 
+
+logger = logging.getLogger(__name__)
 
 DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
@@ -29,14 +33,18 @@ class ParsedEntry:
     tags: List[str]
 
 
-def fetch_feed(url: str) -> List[ParsedEntry]:
+def fetch_feed(url: str, client: httpx.Client | None = None) -> List[ParsedEntry]:
     """
     Fetch and parse the RSS feed using httpx + lxml.
 
     This is tailored for Blogger's RSS structure:
       <rss><channel><item>...</item></channel></rss>
     """
-    response = httpx.get(url, timeout=15)
+
+    if client is None:
+        client = get_client()
+
+    response = client.get(url, timeout=15)
     response.raise_for_status()
 
     root = etree.fromstring(response.content)
@@ -49,11 +57,7 @@ def fetch_feed(url: str) -> List[ParsedEntry]:
         description = (item.findtext("description") or "").strip()
 
         # Blogger labels appear as <category term="Label" .../>
-        tags = [
-            c.get("term")
-            for c in item.findall("category")
-            if c.get("term")
-        ]
+        tags = [c.get("term") for c in item.findall("category") if c.get("term")]
 
         entries.append(
             ParsedEntry(
@@ -79,14 +83,23 @@ def _extract_tags(entry: ParsedEntry) -> Sequence[str]:
     return entry.tags
 
 
-def process_sync(*, limit: int | None = None, dry_run: bool = False, verbose: bool = False) -> None:
+def process_sync(
+    *,
+    limit: int | None = None,
+    dry_run: bool = False,
+    verbose: bool = False,
+    client: httpx.Client | None = None,
+) -> None:
     """Fetch the RSS feed and generate/update Markdown posts."""
     ensure_directories()
 
     if verbose:
-        print(f"Fetching feed: {RSS_URL}")
+        logger.info(f"Fetching feed: {RSS_URL}")
 
-    entries = fetch_feed(RSS_URL)
+    if client is None:
+       raise ValueError("Client is required")
+
+    entries = fetch_feed(RSS_URL, client=client)
 
     if limit is not None:
         entries = entries[:limit]
@@ -96,7 +109,7 @@ def process_sync(*, limit: int | None = None, dry_run: bool = False, verbose: bo
         filename = generate_post_filename(date, entry.title)
 
         if verbose:
-            print(f"Processing: {entry.title} -> {filename}")
+            logger.info(f"Processing: {entry.title} -> {filename}")
 
         soup, md_body = transform_entry_html(entry.description)
         tags = _extract_tags(entry)
@@ -112,7 +125,7 @@ def process_sync(*, limit: int | None = None, dry_run: bool = False, verbose: bo
 
         if verbose:
             action = "Would write" if dry_run else "Wrote"
-            print(f"{action} post: {written_path}")
+            logger.info(f"{action} post: {written_path}")
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -142,13 +155,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_arg_parser()
     args = parser.parse_args()
-    process_sync(
-        limit=args.limit,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
-    )
+    with get_client() as client:
+        process_sync(
+            limit=args.limit,
+            dry_run=args.dry_run,
+            verbose=args.verbose,
+            client=client,
+        )
 
 
 if __name__ == "__main__":
     main()
-

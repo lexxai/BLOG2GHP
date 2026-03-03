@@ -1,13 +1,25 @@
 from __future__ import annotations
 
 import hashlib
-import os
 from pathlib import Path
 from typing import Optional
 
 import httpx
 
 from .config import BASE_DIR, IMG_DIR
+
+
+def get_client() -> httpx.Client:
+    """Get a configured httpx client."""
+    return httpx.Client(
+        timeout=15,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        follow_redirects=True,
+        http2=True,
+        transport=httpx.HTTPTransport(retries=10),
+    )
 
 
 def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
@@ -26,7 +38,7 @@ def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
     return f"img_{digest}{fallback_ext}"
 
 
-def download_image(img_url: str, timeout: int = 15) -> str:
+def download_image(img_url: str, timeout: int = 15, client: Optional[httpx.Client] = None) -> str:
     """
     Download an image and return the web path relative to the site root.
 
@@ -35,6 +47,9 @@ def download_image(img_url: str, timeout: int = 15) -> str:
     On failure:
         returns the original `img_url` so the HTML still points somewhere.
     """
+    if client is None:
+        client = get_client()
+
     try:
         filename = _stable_filename_from_url(img_url)
         local_dir: Path = BASE_DIR / IMG_DIR
@@ -44,7 +59,7 @@ def download_image(img_url: str, timeout: int = 15) -> str:
         web_path = f"/{IMG_DIR.as_posix()}/{filename}"
 
         if not local_path.exists():
-            response = httpx.get(img_url, timeout=timeout)
+            response = client.get(img_url, timeout=timeout)
             if response.status_code == 200:
                 with open(local_path, "wb") as f:
                     f.write(response.content)
@@ -55,5 +70,4 @@ def download_image(img_url: str, timeout: int = 15) -> str:
         return img_url
 
 
-__all__ = ["download_image"]
-
+__all__ = ["download_image", "get_client"]

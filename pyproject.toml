@@ -3,10 +3,32 @@ name = "blog2ghp"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.14.3",
-    "httpx>=0.28.1",
+    "coloredlogs>=15.0.1",
+    "httpx[http2]>=0.28.1",
     "lxml>=6.0.2",
     "markdownify>=1.2.2",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.4",
+]
+
+# Code-style tools
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.flake8]
+max-line-length = 120
+
+[tool.ruff]
+line-length = 120
+

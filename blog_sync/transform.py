@@ -10,9 +10,7 @@ from .config import OLD_DOMAIN, NEW_DOMAIN
 from .downloader import download_image
 
 
-_domain_pattern = re.compile(
-    rf"^(https?:)?//{re.escape(OLD_DOMAIN)}", re.IGNORECASE
-)
+_domain_pattern = re.compile(rf"^(https?:)?//{re.escape(OLD_DOMAIN)}", re.IGNORECASE)
 
 
 def _rewrite_images(soup: BeautifulSoup) -> None:
@@ -60,4 +58,3 @@ def transform_entry_html(html: str) -> Tuple[BeautifulSoup, str]:
 
 
 __all__ = ["transform_entry_html"]
-
