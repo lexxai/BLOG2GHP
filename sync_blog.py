@@ -110,7 +110,7 @@ def process_sync(
 
     for entry in entries:
         date = _parse_date(entry)
-        filename = base_path / generate_post_filename(date, entry.title)
+        filename = (base_path / generate_post_filename(date, entry.title)).resolve()
 
         if verbose:
             logger.info(f"Processing: {entry.title} -> {filename}")
