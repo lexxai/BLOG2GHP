@@ -12,19 +12,6 @@ from .config import BASE_DIR, IMG_DIR
 logger = logging.getLogger(__name__)
 
 
-def get_client() -> httpx.Client:
-    """Get a configured httpx client."""
-    return httpx.Client(
-        timeout=15,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        },
-        follow_redirects=True,
-        http2=True,
-        transport=httpx.HTTPTransport(retries=10),
-    )
-
-
 def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
     """
     Build a reasonably stable filename from the URL.
@@ -74,4 +61,6 @@ def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Opt
         return img_url
 
 
-__all__ = ["download_image", "get_client"]
+__all__ = [
+    "download_image",
+]

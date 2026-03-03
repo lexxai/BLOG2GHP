@@ -11,7 +11,7 @@ import httpx
 from lxml import etree  # type: ignore
 
 from blog_sync.config import RSS_URL, ensure_directories
-from blog_sync.downloader import get_client
+from blog_sync.client import get_client
 from blog_sync.posts import (
     build_frontmatter,
     generate_post_filename,
