@@ -1,0 +1,6 @@
+markdownify
+beautifulsoup4
+requests
+httpx
+lxml
+
