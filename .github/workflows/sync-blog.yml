@@ -27,10 +27,6 @@ jobs:
       LOG_LEVEL: INFO
 
     steps:
-      - name: Git settings
-        run: |
-          git config set advice.defaultBranchName false
-
       # 1. Clone your code from BLOG2GHP (where sync_blog.py lives)
       - name: Clone Project Repository (BLOG2GHP) [project-src]
         uses: actions/checkout@v4
