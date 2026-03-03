@@ -81,7 +81,6 @@ jobs:
       - name: Push changes to Pages Repo
         working-directory: publish-dir
         if: success()
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAGES_PUSH_TOKEN }}
         run: |
+          git remote set-url origin https://x-access-token:${{ secrets.PAGES_PUSH_TOKEN }}@github.com/lexxai/lexxai.git
           git push origin gh-pages
