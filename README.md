@@ -99,7 +99,7 @@ python -m blog2ghp.sync_blog --limit 10
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `BLOG_RSS_URL` | Blogger RSS feed URL | Derived from BASE_URL |
-| `BASE_URL` | Your blog domain (without http://) | lexxai.blogspot.com |
+| `BASE_URL` | Your blog domain (without https://) | lexxai.blogspot.com |
 | `BLOG_OLD_DOMAIN` | Old domain for link rewriting | Same as BASE_URL |
 | `BLOG_NEW_DOMAIN` | New GitHub Pages domain | {old-domain}.github.io |
 | `MAX_RESULTS` | Posts to sync per run | 50 |

@@ -1,0 +1,82 @@
+name: Sync Blogger RSS to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_results:
+        description: "Override MAX_RESULTS (default 500 for manual runs)"
+        required: false
+        default: "500"
+  schedule:
+    # Twice per day (00:00 and 12:00 UTC)
+    - cron: "0 0,12 * * *"
+
+jobs:
+  sync-blog:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' && !contains(github.ref, 'refs/heads/')
+
+    env:
+      # For scheduled runs use 5; for manual runs use input or fallback 500.
+      MAX_RESULTS: ${{ github.event_name == 'schedule' && '5' || (github.event.inputs.max_results || '500') }}
+      BASE_URL: ${{ secrets.BLOG_DOMAIN }}
+      OLD_DOMAIN: ${{ secrets.BLOG_OLD_DOMAIN }}
+      NEW_DOMAIN: ${{ secrets.BLOG_NEW_DOMAIN }}
+      LOG_LEVEL: INFO
+
+    steps:
+      # 1. Clone your code from BLOG2GHP (where sync_blog.py lives)
+      - name: Clone Project Repository (BLOG2GHP)
+        uses: actions/checkout@v4
+        with:
+          repository: lexxai/BLOG2GHP
+          path: project-src
+
+      # 2. Clone the TARGET Pages repo (lexxai) to push changes here
+      - name: Clone Target Pages Repository
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd project-src
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      # 5. Run the sync script
+      - name: Run blog sync
+        if: always() # Always run manual trigger, scheduled already filtered
+        run: |
+          echo "Running sync with MAX_RESULTS=${MAX_RESULTS} in in project-src"
+          cd project-src
+          python sync_blog.py --verbose || true
+
+      # 6. Commit changes TO THE TARGET REPO (lexxai)
+      - name: Commit changes
+        if: always() && github.event_name == 'schedule'
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "Sync blog from RSS (MAX_RESULTS=${MAX_RESULTS})"
+
+        # 7. Push changes to the Pages branch
+      - name: Push changes to Pages Repo
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAGES_PUSH_TOKEN }}
+        run: |
+          git push origin gh-pages
