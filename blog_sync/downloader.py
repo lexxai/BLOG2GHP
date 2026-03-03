@@ -3,9 +3,8 @@ from __future__ import annotations
 import hashlib
 import logging
 from pathlib import Path
-from typing import Optional
 
-import httpx
+from  httpx import Client
 
 from .config import BASE_DIR, IMG_DIR
 
@@ -28,7 +27,7 @@ def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
     return f"img_{digest}{fallback_ext}"
 
 
-def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Optional[httpx.Client] = None) -> str:
+def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Client|None = None) -> str:
     """
     Download an image and return the web path relative to the site root.
 
