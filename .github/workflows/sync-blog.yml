@@ -66,10 +66,20 @@ jobs:
         working-directory: publish-dir
         if: always()
         run: |
-          if git diff --quiet; then
-            echo "No changes to commit."
+          # Ensure we are on the target branch
+          git checkout gh-pages
+
+          # CORRECT CHECK: Detects BOTH untracked (new) and modified files
+          # --porcelain gives machine-readable output, empty if clean
+          CHANGES=$(git ls-files --others --modified)
+
+          if [ -z "$CHANGES" ]; then
+            echo "No changes to commit (no untracked or modified files)."
             exit 0
           fi
+
+          echo "Changes detected:"
+          echo "$CHANGES"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -83,9 +93,11 @@ jobs:
         working-directory: publish-dir
         if: success()
         run: |
-          # Re-check if there are actual changes to push
-          if git diff --cached --quiet; then
-            echo "No changes committed in previous step. Skipping push."
+         # Check if we have unpushed commits (HEAD is ahead of origin/gh-pages)
+          if git log --oneline HEAD...origin/gh-pages | grep -q .; then
+            echo "Commits to push found."
+          else
+            echo "No new commits to push."
             exit 0
           fi
 
