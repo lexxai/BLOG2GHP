@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Sequence
 
 import httpx
-from lxml import etree
+from lxml import etree  # type: ignore
 
 from blog_sync.config import RSS_URL, ensure_directories
 from blog_sync.downloader import get_client
@@ -93,7 +93,10 @@ def process_sync(
     client: httpx.Client | None = None,
 ) -> None:
     """Fetch the RSS feed and generate/update Markdown posts."""
-    ensure_directories()
+
+    base_path = Path() if dest is None else dest
+
+    ensure_directories(base_path)
 
     if verbose:
         logger.info(f"Fetching feed: {RSS_URL}")
@@ -106,8 +109,6 @@ def process_sync(
     if limit is not None:
         entries = entries[:limit]
 
-    base_path = Path() if dest is None else dest
-
     for entry in entries:
         date = _parse_date(entry)
         filename = (base_path / generate_post_filename(date, entry.title)).resolve()
@@ -115,7 +116,7 @@ def process_sync(
         if verbose:
             logger.info(f"Processing: {entry.title} -> {filename}")
 
-        soup, md_body = transform_entry_html(entry.description)
+        soup, md_body = transform_entry_html(entry.description, dest=base_path, client=client)
         tags = _extract_tags(entry)
 
         frontmatter = build_frontmatter(

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).parent.parent.resolve()
 
 
 def _get_env(name: str, default: str) -> str:
@@ -34,10 +34,10 @@ POSTS_DIR: Path = Path(_get_env("BLOG_POSTS_DIR", "_posts"))
 IMG_DIR: Path = Path(_get_env("BLOG_IMG_DIR", "assets/images/blog"))
 
 
-def ensure_directories() -> None:
+def ensure_directories(base_path: Path) -> None:
     """Create required local directories if they do not exist."""
-    (BASE_DIR / POSTS_DIR).mkdir(parents=True, exist_ok=True)
-    (BASE_DIR / IMG_DIR).mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / base_path / POSTS_DIR).mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / base_path / IMG_DIR).mkdir(parents=True, exist_ok=True)
 
 
 def setup_logging() -> None:
@@ -47,7 +47,7 @@ def setup_logging() -> None:
 
         coloredlogs.install(
             level=getattr(logging, LOG_LEVEL.upper()),
-            fmt="%(asctime)s - %(levelname)s - %(message)s",
+            fmt="%(asctime)s - %(levelname)s - %(message)s",  # %(name)s
         )
     except ImportError:
         logging.basicConfig(
@@ -55,6 +55,7 @@ def setup_logging() -> None:
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 setup_logging()

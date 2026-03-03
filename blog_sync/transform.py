@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import re
 from typing import Tuple
 
@@ -13,13 +14,13 @@ from .downloader import download_image
 _domain_pattern = re.compile(rf"^(https?:)?//{re.escape(OLD_DOMAIN)}", re.IGNORECASE)
 
 
-def _rewrite_images(soup: BeautifulSoup) -> None:
+def _rewrite_images(soup: BeautifulSoup, dest: Path, client) -> None:
     """Download images and rewrite their src attributes to local paths."""
     for img in soup.find_all("img"):
         src = img.get("src")
         if not src:
             continue
-        new_src = download_image(src)
+        new_src = download_image(str(src), base_path=dest, client=client)
         img["src"] = new_src
 
 
@@ -43,14 +44,14 @@ def _rewrite_internal_links(soup: BeautifulSoup) -> None:
         a["href"] = f"https://{NEW_DOMAIN}{rest}"
 
 
-def transform_entry_html(html: str) -> Tuple[BeautifulSoup, str]:
+def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, str]:
     """
     Parse an entry's HTML, download/rewire images and links, and
     return both the BeautifulSoup tree and its Markdown representation.
     """
     soup = BeautifulSoup(html, "html.parser")
 
-    _rewrite_images(soup)
+    _rewrite_images(soup, dest=dest, client=client)
     _rewrite_internal_links(soup)
 
     md_body = markdownify.markdownify(str(soup), heading_style="ATX")
