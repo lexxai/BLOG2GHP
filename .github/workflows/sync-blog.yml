@@ -15,8 +15,9 @@ jobs:
   sync-blog:
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'schedule' && !contains(github.ref, 'refs/heads/')
-
+      github.event_name == 'workflow_dispatch' || 
+      (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
+    
     env:
       # For scheduled runs use 5; for manual runs use input or fallback 500.
       MAX_RESULTS: ${{ github.event_name == 'schedule' && '5' || (github.event.inputs.max_results || '500') }}
