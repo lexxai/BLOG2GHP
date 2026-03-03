@@ -112,7 +112,7 @@ jobs:
           echo "✅ Token is present)"
 
           git config --unset "http.https://github.com/.extraheader"
-          git remote set-url origin https://x-access-token:${{secrets.PAGES_PUSH_TOKEN}}@github.com/lexxai.github.io.git
+          git remote set-url origin https://x-access-token:${{secrets.PAGES_PUSH_TOKEN}}@github.com/lexxai/lexxai.github.io.git
           git checkout
           git status
           git push origin gh-pages
