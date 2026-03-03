@@ -4,6 +4,7 @@ import argparse
 from dataclasses import dataclass
 from datetime import datetime
 import logging
+from pathlib import Path
 from typing import List, Sequence
 
 import httpx
@@ -85,6 +86,7 @@ def _extract_tags(entry: ParsedEntry) -> Sequence[str]:
 
 def process_sync(
     *,
+    dest: Path | None = None,
     limit: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
@@ -97,16 +99,18 @@ def process_sync(
         logger.info(f"Fetching feed: {RSS_URL}")
 
     if client is None:
-       raise ValueError("Client is required")
+        raise ValueError("Client is required")
 
     entries = fetch_feed(RSS_URL, client=client)
 
     if limit is not None:
         entries = entries[:limit]
 
+    base_path = Path() if dest is None else dest
+
     for entry in entries:
         date = _parse_date(entry)
-        filename = generate_post_filename(date, entry.title)
+        filename = base_path / generate_post_filename(date, entry.title)
 
         if verbose:
             logger.info(f"Processing: {entry.title} -> {filename}")
@@ -133,6 +137,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         description="Sync Blogger RSS feed to a GitHub Pages/Jekyll repository.",
     )
     parser.add_argument(
+        "--dest",
+        "-d",
+        type=Path,
+        default=None,
+        help="Destination root folder for download",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=None,
@@ -155,13 +166,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_arg_parser()
     args = parser.parse_args()
-    with get_client() as client:
-        process_sync(
-            limit=args.limit,
-            dry_run=args.dry_run,
-            verbose=args.verbose,
-            client=client,
-        )
+    try:
+        with get_client() as client:
+            process_sync(
+                dest=args.dest,
+                limit=args.limit,
+                dry_run=args.dry_run,
+                verbose=args.verbose,
+                client=client,
+            )
+    except KeyboardInterrupt:
+        logger.info("Keyboard Ctrl-C")
 
 
 if __name__ == "__main__":
