@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import requests
+import httpx
 
 from .config import BASE_DIR, IMG_DIR
 
@@ -22,7 +22,7 @@ def _stable_filename_from_url(url: str, fallback_ext: str = ".jpg") -> str:
     if name and "." in name:
         return name
 
-    digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+    digest = hashlib.blake2b(url.encode("utf-8")).hexdigest()[:16]
     return f"img_{digest}{fallback_ext}"
 
 
@@ -44,7 +44,7 @@ def download_image(img_url: str, timeout: int = 15) -> str:
         web_path = f"/{IMG_DIR.as_posix()}/{filename}"
 
         if not local_path.exists():
-            response = requests.get(img_url, timeout=timeout)
+            response = httpx.get(img_url, timeout=timeout)
             if response.status_code == 200:
                 with open(local_path, "wb") as f:
                     f.write(response.content)
