@@ -74,6 +74,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          git checkout 
           git add -A
           git commit -m "Sync blog from RSS (MAX_RESULTS=${MAX_RESULTS})"
 
@@ -83,4 +84,6 @@ jobs:
         if: success()
         run: |
           git remote set-url origin https://x-access-token:${{ secrets.PAGES_PUSH_TOKEN }}@github.com/lexxai/lexxai.git
+          git checkout
+          git status
           git push origin gh-pages
