@@ -100,6 +100,17 @@ jobs:
             echo "No new commits to push."
             exit 0
           fi
+          
+          # --- START: Check if token exists ---
+          if [ -z "${{ secrets.PAGES_PUSH_TOKEN }}" ]; then
+            echo "❌ ERROR: The secret 'PAGES_PUSH_TOKEN' is empty or not configured."
+            echo "Please add a valid Personal Access Token to the repository secrets."
+            exit 1
+          fi
+          # --- END: Check ---
+
+          echo "✅ Token is present (length: ${{ secrets.PAGES_PUSH_TOKEN }} has ${{ secrets.PAGES_PUSH_TOKEN | length }} chars)"
+
 
           git remote set-url origin https://x-access-token:${{ secrets.PAGES_PUSH_TOKEN }}@github.com/lexxai/lexxai.git
           git checkout
