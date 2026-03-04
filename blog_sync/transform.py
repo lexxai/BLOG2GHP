@@ -104,8 +104,13 @@ def _extract_image_tables(soup):
             caption_td = rows[1].find("td", class_="tr-caption")
 
             if img and caption_td:
+<<<<<<< HEAD
                 # Create a div container instead of figure
                 container = soup.new_tag("div", attrs={"class": "image-container"})
+=======
+                # Create figure
+                figure = soup.new_tag("figure")
+>>>>>>> 989ab7e5f4cc232db2b53cc79c439a01d4de6e2d
 
                 # Get the link or just the img
                 link = rows[0].find("a")
@@ -113,11 +118,12 @@ def _extract_image_tables(soup):
                     new_link = soup.new_tag("a", href=link.get("href"))
                     new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
                     new_link.append(new_img)
-                    container.append(new_link)
+                    figure.append(new_link)
                 else:
                     new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
-                    container.append(new_img)
+                    figure.append(new_img)
 
+<<<<<<< HEAD
                 # Add line break
                 container.append(soup.new_tag("br"))
 
@@ -125,12 +131,26 @@ def _extract_image_tables(soup):
                 em = soup.new_tag("em")
                 em.string = caption_td.get_text(strip=True)
                 container.append(em)
+=======
+                # Add caption
+                figcaption = soup.new_tag("figcaption")
+                figcaption.string = caption_td.get_text(strip=True)
+                figure.append(figcaption)
 
-                tables_to_replace.append((table, container))
+                tables_to_replace.append((table, figure))
 
+    # Replace all at once to avoid iteration issues
+    for table, figure in tables_to_replace:
+        table.replace_with(figure)
+>>>>>>> 989ab7e5f4cc232db2b53cc79c439a01d4de6e2d
+
+
+<<<<<<< HEAD
     # Replace all at once to avoid iteration issues
     for table, container in tables_to_replace:
         table.replace_with(container)
+=======
+>>>>>>> 989ab7e5f4cc232db2b53cc79c439a01d4de6e2d
 
 
 def md(soup, **options):
