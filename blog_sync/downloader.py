@@ -62,6 +62,8 @@ def download_image(img_url: str, base_path: Path, timeout: int = 15, client: Cli
                 logger.debug(f"download_image to {local_path}")
                 with open(local_path, "wb") as f:
                     f.write(response.content)
+            else:
+                logger.warning(f"Failed to download image from {img_url}")
 
         return web_path
     except Exception:
