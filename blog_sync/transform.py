@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import re
 from typing import Tuple
@@ -7,21 +8,40 @@ from typing import Tuple
 from bs4 import BeautifulSoup
 import markdownify
 
-from blog_sync.config import OLD_DOMAIN, NEW_DOMAIN
+from blog_sync.config import MAX_THREADS_WORKERS, OLD_DOMAIN, NEW_DOMAIN
 from blog_sync.downloader import download_image
+
+logger = logging.getLogger(__name__)
 
 
 _domain_pattern = re.compile(rf"^(https?:)?//{re.escape(OLD_DOMAIN)}", re.IGNORECASE)
 
 
-def _rewrite_images(soup: BeautifulSoup, dest: Path, client) -> None:
+def _image_processing(img, dest: Path, client):
+    src = img.get("src")
+    new_src = download_image(str(src), base_path=dest, client=client)
+    img["src"] = new_src
+
+
+def _rewrite_images(soup: BeautifulSoup, dest: Path, client, use_threading: bool = False) -> None:
     """Download images and rewrite their src attributes to local paths."""
+    imgs = []
     for img in soup.find_all("img"):
         src = img.get("src")
         if not src:
             continue
-        new_src = download_image(str(src), base_path=dest, client=client)
-        img["src"] = new_src
+        imgs.append(img)
+
+    if use_threading and len(imgs) > 1:
+        logger.debug(f"Processing {len(imgs)} images with threading")
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=MAX_THREADS_WORKERS) as executor:
+            for img in imgs:
+                executor.submit(_image_processing, img, dest, client)
+    else:
+        for img in imgs:
+            _image_processing(img, dest, client)
 
 
 def _rewrite_internal_links(soup: BeautifulSoup) -> None:
@@ -165,7 +185,7 @@ def analyze_blogger_images(soup):
         print()
 
 
-def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, str]:
+def transform_entry_html(html: str, dest: Path, client, use_threading: bool = False) -> Tuple[BeautifulSoup, str]:
     """
     Parse an entry's HTML, download/rewire images and links, and
     return both the BeautifulSoup tree and its Markdown representation.
@@ -173,7 +193,7 @@ def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, 
     soup = BeautifulSoup(html, "html.parser")
 
     _extract_image_tables(soup)
-    _rewrite_images(soup, dest=dest, client=client)
+    _rewrite_images(soup, dest=dest, client=client, use_threading=use_threading)
     _rewrite_internal_links(soup)
 
     # md_body = markdownify.markdownify(str(soup), heading_style="ATX")
