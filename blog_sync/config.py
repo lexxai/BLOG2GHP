@@ -31,6 +31,7 @@ RSS_URL: str = _get_env(
     f"https://{BASE_URL}/feeds/posts/default?alt=rss",
 )
 
+ENABLE_REWRITE_LINKS: bool = _get_env("ENABLE_REWRITE_LINKS", "false").lower() in ("true", "1", "yes")
 OLD_DOMAIN: str = _get_env("BLOG_OLD_DOMAIN", BASE_URL)
 NEW_DOMAIN: str = _get_env("BLOG_NEW_DOMAIN", f"{OLD_DOMAIN.split('.')[0]}.github.io")
 
