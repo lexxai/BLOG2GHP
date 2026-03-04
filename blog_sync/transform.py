@@ -7,8 +7,8 @@ from typing import Tuple
 from bs4 import BeautifulSoup
 import markdownify
 
-from .config import OLD_DOMAIN, NEW_DOMAIN
-from .downloader import download_image
+from blog_sync.config import OLD_DOMAIN, NEW_DOMAIN
+from blog_sync.downloader import download_image
 
 
 _domain_pattern = re.compile(rf"^(https?:)?//{re.escape(OLD_DOMAIN)}", re.IGNORECASE)
@@ -43,6 +43,39 @@ def _rewrite_internal_links(soup: BeautifulSoup) -> None:
         rest = href[match.end() :]
         a["href"] = f"https://{NEW_DOMAIN}{rest}"
 
+def _extract_image_tables(soup):
+    """Convert Blogger image tables to cleaner figure+caption format."""
+    
+    for tbody in soup.find_all("tbody"):
+        rows = tbody.find_all("tr")
+        
+        # Check if it's an image table (image row + caption row)
+        if len(rows) == 2:
+            img_cell = rows[0].find("img")
+            caption_cell = rows[1].find("td", class_="tr-caption")
+            
+            if img_cell and caption_cell:
+                # Create a cleaner structure
+                figure = soup.new_tag("figure")
+                
+                # Keep the link if it exists
+                link = rows[0].find("a")
+                if link:
+                    figure.append(link)
+                else:
+                    figure.append(img_cell)
+                
+                # Add caption
+                figcaption = soup.new_tag("figcaption")
+                figcaption.string = caption_cell.get_text(strip=True)
+                figure.append(figcaption)
+                
+                # Replace table with figure
+                tbody.parent.replace_with(figure)
+
+def md(soup, **options):
+    return markdownify.MarkdownConverter(**options).convert_soup(soup)
+
 
 def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, str]:
     """
@@ -51,10 +84,18 @@ def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, 
     """
     soup = BeautifulSoup(html, "html.parser")
 
+    _extract_image_tables(soup)
     _rewrite_images(soup, dest=dest, client=client)
     _rewrite_internal_links(soup)
 
-    md_body = markdownify.markdownify(str(soup), heading_style="ATX")
+    # md_body = markdownify.markdownify(str(soup), heading_style="ATX")
+    md_body = md(
+        soup,
+        heading_style="ATX",  # Use # headers
+        keep_inline_images_in=["td"],  # Keep <img> tags inside <td>
+        # convert=["img"],
+    )
+
     return soup, md_body
 
 

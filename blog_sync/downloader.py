@@ -7,7 +7,7 @@ from pathlib import Path
 
 from httpx import Client
 
-from .config import BASE_DIR, IMG_DIR
+from blog_sync.config import BASE_DIR, IMG_DIR
 
 logger = logging.getLogger(__name__)
 
