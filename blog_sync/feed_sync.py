@@ -3,7 +3,15 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from blog_sync.config import PAGE_SIZE, RSS_URL, SAFETY_LIMIT, ensure_directories, get_rss_url
+from blog_sync.config import (
+    PAGE_SIZE,
+    RSS_URL,
+    SAFETY_LIMIT,
+    USE_THREADING,
+    USE_THREADING,
+    ensure_directories,
+    get_rss_url,
+)
 from blog_sync.client import http_connection
 from blog_sync.posts import (
     build_frontmatter,
@@ -41,12 +49,15 @@ class FeedSync:
         limit: int | None = None,
         dry_run: bool = False,
         verbose: bool = False,
+        use_threading: bool | None = None,
     ) -> None:
         self.client = client
         self.dest = dest
         self.limit = limit
         self.dry_run = dry_run
         self.verbose = verbose
+        self.use_threading: bool = use_threading or USE_THREADING
+        self.base_path = Path() if self.dest is None else self.dest
 
     def fetch_feed(self, url: str, client: Client | None = None) -> list[ParsedEntry]:
         """
@@ -96,16 +107,37 @@ class FeedSync:
         """Return tags/labels for an entry."""
         return entry.tags
 
-    def process_sync(self, use_threading: bool = False) -> None:
+    def process_entry(self, entry: ParsedEntry) -> None:
+        date = self._parse_date(entry)
+        filename = (self.base_path / generate_post_filename(date, entry.title)).resolve()
+
+        if self.verbose:
+            logger.info(f"Processing: {entry.title} -> {filename}")
+
+        soup, md_body = transform_entry_html(entry.description, dest=self.base_path, client=self.client)
+        tags = self._extract_tags(entry)
+
+        frontmatter = build_frontmatter(
+            title=entry.title,
+            date=date,
+            tags=tags,
+            original_link=entry.link,
+        )
+
+        written_path = write_post(filename, frontmatter, md_body, dry_run=self.dry_run)
+
+        if self.verbose:
+            action = "Would write" if self.dry_run else "Wrote"
+            logger.info(f"{action} post: {written_path}")
+
+    def process_sync(self) -> None:
         """Fetch the RSS feed and generate/update Markdown posts."""
 
         start_index: int = 1
         max_per_page: int = int(PAGE_SIZE) if PAGE_SIZE.isdigit() else 50
         all_processed: bool = False
 
-        base_path = Path() if self.dest is None else self.dest
-
-        ensure_directories(base_path)
+        ensure_directories(self.base_path)
 
         if self.client is None:
             raise ValueError("Client is required")
@@ -143,27 +175,10 @@ class FeedSync:
                 logger.debug(f"Fetched {fetched_entries} entries, processed {total_processed + len(entries)} so far.")
 
             for entry in entries:
-                date = self._parse_date(entry)
-                filename = (base_path / generate_post_filename(date, entry.title)).resolve()
-
-                if self.verbose:
-                    logger.info(f"Processing: {entry.title} -> {filename}")
-
-                soup, md_body = transform_entry_html(entry.description, dest=base_path, client=self.client)
-                tags = self._extract_tags(entry)
-
-                frontmatter = build_frontmatter(
-                    title=entry.title,
-                    date=date,
-                    tags=tags,
-                    original_link=entry.link,
-                )
-
-                written_path = write_post(filename, frontmatter, md_body, dry_run=self.dry_run)
-
-                if self.verbose:
-                    action = "Would write" if self.dry_run else "Wrote"
-                    logger.info(f"{action} post: {written_path}")
+                if self.dry_run:
+                    logger.info(f"Would process entry: {entry.title}")
+                else:
+                    self.process_entry(entry)
 
             # Move to the next page
             start_index += len(entries)
