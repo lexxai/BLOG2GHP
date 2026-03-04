@@ -1,16 +1,14 @@
-
 from threading import Lock
 
 from httpx import Client, HTTPTransport
 
 
 class HttpConnection:
-
     def __init__(self) -> None:
         self.client: Client | None = None
         self._lock = Lock()
         self.options = {
-            "retries": 10,
+            "retries": 3,
             "timeout": 15,
             "http2": True,
             "follow_redirects": True,

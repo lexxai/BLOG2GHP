@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 
 from blog_sync.config import (
+    MAX_THREADS_WORKERS,
     PAGE_SIZE,
-    RSS_URL,
     SAFETY_LIMIT,
     USE_THREADING,
     USE_THREADING,
@@ -58,7 +58,7 @@ class FeedSync:
         self.verbose = verbose
         self.use_threading: bool = use_threading or USE_THREADING
         self.base_path = Path() if self.dest is None else self.dest
-        self.max_workers = 10  # Number of simultaneous image downloads
+        self.max_workers = MAX_THREADS_WORKERS
 
     def fetch_feed(self, url: str, client: Client | None = None) -> list[ParsedEntry]:
         """
@@ -115,7 +115,9 @@ class FeedSync:
         if self.verbose:
             logger.info(f"Processing: {entry.title} -> {filename}")
 
-        soup, md_body = transform_entry_html(entry.description, dest=self.base_path, client=self.client)
+        soup, md_body = transform_entry_html(
+            entry.description, dest=self.base_path, client=self.client, use_threading=self.use_threading
+        )
         tags = self._extract_tags(entry)
 
         frontmatter = build_frontmatter(
@@ -146,13 +148,16 @@ class FeedSync:
         total_processed = 0
 
         while not all_processed:
-
             rss_url = get_rss_url(start_index=start_index, max_results=max_per_page)
 
             if self.verbose:
                 logger.debug(f"**** Fetching feed: {rss_url}")
 
-            entries = self.fetch_feed(rss_url)
+            try:
+                entries = self.fetch_feed(rss_url)
+            except Exception as e:
+                logger.error(f"Error fetching feed {rss_url}: {e}")
+                continue
 
             if self.limit is not None and total_processed > self.limit:
                 logger.info(f"Reached overall limit of {self.limit} entries. Stopping.")

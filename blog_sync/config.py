@@ -23,7 +23,7 @@ BASE_URL: str = _get_env("BASE_URL", "lexxai.blogspot.com")
 SAFETY_LIMIT = 5_000  # Max entries to process in total (to prevent infinite loops)
 
 USE_THREADING: bool = _get_env("USE_THREADING", "true").lower() in ("true", "1", "yes")
-
+MAX_THREADS_WORKERS: int = int(_get_env("MAX_THREADS_WORKERS", "10"))
 
 
 RSS_URL: str = _get_env(
@@ -69,4 +69,3 @@ def setup_logging() -> None:
 
 
 setup_logging()
-
