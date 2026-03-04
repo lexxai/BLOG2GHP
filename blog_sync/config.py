@@ -23,7 +23,7 @@ BASE_URL: str = _get_env("BASE_URL", "lexxai.blogspot.com")
 
 RSS_URL: str = _get_env(
     "BLOG_RSS_URL",
-    f"https://{BASE_URL}/feeds/posts/default?alt=rss&max-results={MAX_RESULTS}",
+    f"https://{BASE_URL}/feeds/posts/default?alt=rss",
 )
 
 OLD_DOMAIN: str = _get_env("BLOG_OLD_DOMAIN", BASE_URL)
@@ -32,6 +32,11 @@ NEW_DOMAIN: str = _get_env("BLOG_NEW_DOMAIN", f"{OLD_DOMAIN.split('.')[0]}.githu
 # Content/output paths (relative to repo root)
 POSTS_DIR: Path = Path(_get_env("BLOG_POSTS_DIR", "_posts"))
 IMG_DIR: Path = Path(_get_env("BLOG_IMG_DIR", "assets/images/blog"))
+
+
+def get_rss_url(start_index: int = 1, max_results: int | None = None) -> str:
+    """Construct the RSS feed URL with pagination parameters."""
+    return f"{RSS_URL}&max-results={max_results or MAX_RESULTS}&start-index={start_index}"
 
 
 def ensure_directories(base_path: Path) -> None:
