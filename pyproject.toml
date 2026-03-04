@@ -1,7 +1,7 @@
 [project]
 name = "blog2ghp"
 version = "0.2.0"
-description = "Add your description here"
+description = "A Python utility that syncs posts from a Blogger RSS feed to a GitHub Pages/Jekyll repository. It automatically downloads images, rewrites internal links, and generates properly formatted Markdown files with frontmatter."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
