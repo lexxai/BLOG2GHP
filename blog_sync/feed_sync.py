@@ -58,6 +58,7 @@ class FeedSync:
         self.verbose = verbose
         self.use_threading: bool = use_threading or USE_THREADING
         self.base_path = Path() if self.dest is None else self.dest
+        self.max_workers = 10  # Number of simultaneous image downloads
 
     def fetch_feed(self, url: str, client: Client | None = None) -> list[ParsedEntry]:
         """
@@ -174,11 +175,19 @@ class FeedSync:
                     break
                 logger.debug(f"Fetched {fetched_entries} entries, processed {total_processed + len(entries)} so far.")
 
-            for entry in entries:
-                if self.dry_run:
-                    logger.info(f"Would process entry: {entry.title}")
-                else:
-                    self.process_entry(entry)
+            if self.use_threading:
+                from concurrent.futures import ThreadPoolExecutor
+
+                logger.debug(f"Processing {len(entries)} entries with threading (max_workers={self.max_workers})...")
+                # Create a list of futures to process the entries concurrently
+                with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    executor.map(self.process_entry, entries)
+            else:
+                for entry in entries:
+                    if self.dry_run:
+                        logger.info(f"Would process entry: {entry.title}")
+                    else:
+                        self.process_entry(entry)
 
             # Move to the next page
             start_index += len(entries)
