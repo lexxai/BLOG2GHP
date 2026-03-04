@@ -44,6 +44,49 @@ def _rewrite_internal_links(soup: BeautifulSoup) -> None:
         a["href"] = f"https://{NEW_DOMAIN}{rest}"
 
 
+def _extract_image_tables_figure(soup):
+    """Convert Blogger image tables to cleaner figure+caption format."""
+
+    tables_to_replace = []
+
+    for table in soup.find_all("table"):
+        tbody = table.find("tbody")
+        if not tbody:
+            continue
+
+        rows = tbody.find_all("tr", recursive=False)
+
+        if len(rows) == 2:
+            img = rows[0].find("img")
+            caption_td = rows[1].find("td", class_="tr-caption")
+
+            if img and caption_td:
+                # Create figure
+                figure = soup.new_tag("figure")
+
+                # Get the link or just the img
+                link = rows[0].find("a")
+                if link:
+                    new_link = soup.new_tag("a", href=link.get("href"))
+                    new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
+                    new_link.append(new_img)
+                    figure.append(new_link)
+                else:
+                    new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
+                    figure.append(new_img)
+
+                # Add caption
+                figcaption = soup.new_tag("figcaption")
+                figcaption.string = caption_td.get_text(strip=True)
+                figure.append(figcaption)
+
+                tables_to_replace.append((table, figure))
+
+    # Replace all at once to avoid iteration issues
+    for table, figure in tables_to_replace:
+        table.replace_with(figure)
+
+
 def _extract_image_tables(soup):
     """Convert Blogger image tables to cleaner figure+caption format."""
 
@@ -61,8 +104,8 @@ def _extract_image_tables(soup):
             caption_td = rows[1].find("td", class_="tr-caption")
 
             if img and caption_td:
-                # Create a paragraph container
-                container = soup.new_tag("p")
+                # Create a div container instead of figure
+                container = soup.new_tag("div", attrs={"class": "image-container"})
 
                 # Get the link or just the img
                 link = rows[0].find("a")
@@ -75,18 +118,19 @@ def _extract_image_tables(soup):
                     new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
                     container.append(new_img)
 
-                # Add space + caption as emphasized text (no br)
-                container.append(" ")  # Just a space
+                # Add line break
+                container.append(soup.new_tag("br"))
+
+                # Add caption as emphasized text
                 em = soup.new_tag("em")
                 em.string = caption_td.get_text(strip=True)
                 container.append(em)
 
                 tables_to_replace.append((table, container))
 
-    # Replace all at once
+    # Replace all at once to avoid iteration issues
     for table, container in tables_to_replace:
         table.replace_with(container)
-
 
 
 def md(soup, **options):
