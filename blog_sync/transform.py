@@ -8,7 +8,7 @@ from typing import Tuple
 from bs4 import BeautifulSoup
 import markdownify
 
-from blog_sync.config import MAX_THREADS_WORKERS, OLD_DOMAIN, NEW_DOMAIN
+from blog_sync.config import ENABLE_REWRITE_LINKS, MAX_THREADS_WORKERS, OLD_DOMAIN, NEW_DOMAIN
 from blog_sync.downloader import download_image
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def _rewrite_internal_links(soup: BeautifulSoup) -> None:
     """
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        match = _domain_pattern.match(href)
+        match = _domain_pattern.match(href)  # type: ignore # noqa
         if not match:
             continue
 
@@ -194,7 +194,8 @@ def transform_entry_html(html: str, dest: Path, client, use_threading: bool = Fa
 
     _extract_image_tables(soup)
     _rewrite_images(soup, dest=dest, client=client, use_threading=use_threading)
-    _rewrite_internal_links(soup)
+    if ENABLE_REWRITE_LINKS:
+        _rewrite_internal_links(soup)
 
     # md_body = markdownify.markdownify(str(soup), heading_style="ATX")
     md_body = md(
