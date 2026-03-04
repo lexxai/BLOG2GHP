@@ -8,11 +8,9 @@ from blog_sync.config import (
     PAGE_SIZE,
     SAFETY_LIMIT,
     USE_THREADING,
-    USE_THREADING,
     ensure_directories,
     get_rss_url,
 )
-from blog_sync.client import http_connection
 from blog_sync.posts import (
     build_frontmatter,
     generate_post_filename,
