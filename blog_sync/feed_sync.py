@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from blog_sync.config import RSS_URL, ensure_directories
+from blog_sync.config import RSS_URL, ensure_directories, get_rss_url
 from blog_sync.client import http_connection
 from blog_sync.posts import (
     build_frontmatter,
@@ -96,43 +96,80 @@ class FeedSync:
         """Return tags/labels for an entry."""
         return entry.tags
 
-    def process_sync(self) -> None:
+    def process_sync(self, use_threading: bool = False) -> None:
         """Fetch the RSS feed and generate/update Markdown posts."""
+
+        start_index: int = 1
+        max_per_page: int = 10  # Use the actual working limit
+        all_processed: bool = False
 
         base_path = Path() if self.dest is None else self.dest
 
         ensure_directories(base_path)
 
-        if self.verbose:
-            logger.info(f"Fetching feed: {RSS_URL}")
-
         if self.client is None:
             raise ValueError("Client is required")
 
-        entries = self.fetch_feed(RSS_URL)
+        total_processed = 0
 
-        if self.limit is not None:
-            entries = entries[:self.limit]
+        while not all_processed:
 
-        for entry in entries:
-            date = self._parse_date(entry)
-            filename = (base_path / generate_post_filename(date, entry.title)).resolve()
+            rss_url = get_rss_url(start_index=start_index, max_results=max_per_page)
 
             if self.verbose:
-                logger.info(f"Processing: {entry.title} -> {filename}")
+                logger.debug(f"**** Fetching feed: {rss_url}")
 
-            soup, md_body = transform_entry_html(entry.description, dest=base_path, client=self.client)
-            tags = self._extract_tags(entry)
+            entries = self.fetch_feed(rss_url)
 
-            frontmatter = build_frontmatter(
-                title=entry.title,
-                date=date,
-                tags=tags,
-                original_link=entry.link,
-            )
+            if self.limit is not None and total_processed > self.limit:
+                logger.info(f"Reached overall limit of {self.limit} entries. Stopping.")
+                all_processed = True
+                break
 
-            written_path = write_post(filename, frontmatter, md_body, dry_run=self.dry_run)
+            if not entries:
+                all_processed = True
+                break
+            if self.limit is not None:
+                remaining = self.limit - total_processed
+                fetched_entries = len(entries)
+                if remaining < 0:
+                    remaining = 0
+                if remaining < fetched_entries:
+                    entries = entries[:remaining]
+                if len(entries) == 0:
+                    all_processed = True
+                    logger.info(f"Reached overall limit of {self.limit} entries. Stopping.")
+                    break
+                logger.debug(f"Fetched {fetched_entries} entries, processed {total_processed + len(entries)} so far.")
 
-            if self.verbose:
-                action = "Would write" if self.dry_run else "Wrote"
-                logger.info(f"{action} post: {written_path}")
+            for entry in entries:
+                date = self._parse_date(entry)
+                filename = (base_path / generate_post_filename(date, entry.title)).resolve()
+
+                if self.verbose:
+                    logger.info(f"Processing: {entry.title} -> {filename}")
+
+                soup, md_body = transform_entry_html(entry.description, dest=base_path, client=self.client)
+                tags = self._extract_tags(entry)
+
+                frontmatter = build_frontmatter(
+                    title=entry.title,
+                    date=date,
+                    tags=tags,
+                    original_link=entry.link,
+                )
+
+                written_path = write_post(filename, frontmatter, md_body, dry_run=self.dry_run)
+
+                if self.verbose:
+                    action = "Would write" if self.dry_run else "Wrote"
+                    logger.info(f"{action} post: {written_path}")
+
+            # Move to the next page
+            start_index += len(entries)
+            total_processed += len(entries)
+
+            # Safety break if needed
+            if start_index > 5000:  # Adjust based on your total post count
+                logger.warning("Reached safety limit for pagination. Stopping.")
+                break
