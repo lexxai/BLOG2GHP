@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from blog_sync.config import RSS_URL, ensure_directories, get_rss_url
+from blog_sync.config import PAGE_SIZE, RSS_URL, SAFETY_LIMIT, ensure_directories, get_rss_url
 from blog_sync.client import http_connection
 from blog_sync.posts import (
     build_frontmatter,
@@ -100,7 +100,7 @@ class FeedSync:
         """Fetch the RSS feed and generate/update Markdown posts."""
 
         start_index: int = 1
-        max_per_page: int = 10  # Use the actual working limit
+        max_per_page: int = int(PAGE_SIZE) if PAGE_SIZE.isdigit() else 50
         all_processed: bool = False
 
         base_path = Path() if self.dest is None else self.dest
@@ -170,6 +170,6 @@ class FeedSync:
             total_processed += len(entries)
 
             # Safety break if needed
-            if start_index > 5000:  # Adjust based on your total post count
-                logger.warning("Reached safety limit for pagination. Stopping.")
+            if start_index > SAFETY_LIMIT:  # Adjust based on your total post count
+                logger.warning(f"Reached safety limit for pagination ({SAFETY_LIMIT}). Stopping.")
                 break

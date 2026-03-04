@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 from blog_sync.client import http_connection
+from blog_sync.config import MAX_RESULTS
 from blog_sync.feed_sync import FeedSync
 
 
@@ -26,8 +27,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit",
         type=int,
-        default=None,
-        help="Only process the latest N entries from the feed.",
+        default=MAX_RESULTS,
+        help=f"Only process the latest N entries from the feed. default: {MAX_RESULTS}",
     )
     parser.add_argument(
         "--dry-run",
