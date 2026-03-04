@@ -12,6 +12,7 @@ from lxml import etree  # type: ignore
 
 from blog_sync.config import RSS_URL, ensure_directories
 from blog_sync.client import http_connection
+from blog_sync.feed_sync import FeedSync
 from blog_sync.posts import (
     build_frontmatter,
     generate_post_filename,
@@ -170,13 +171,8 @@ def main() -> None:
     args = parser.parse_args()
     try:
         with http_connection.get_client() as client:
-            process_sync(
-                dest=args.dest,
-                limit=args.limit,
-                dry_run=args.dry_run,
-                verbose=args.verbose,
-                client=client,
-            )
+            feed_sync = FeedSync(client, dest=args.dest, limit=args.limit, dry_run=args.dry_run, verbose=args.verbose)
+            feed_sync.process_sync()
     except KeyboardInterrupt:
         logger.info("Keyboard Ctrl-C")
 
