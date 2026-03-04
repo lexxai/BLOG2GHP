@@ -22,6 +22,8 @@ PAGE_SIZE: str = _get_env("PAGE_SIZE", "50")
 BASE_URL: str = _get_env("BASE_URL", "lexxai.blogspot.com")
 SAFETY_LIMIT = 5_000  # Max entries to process in total (to prevent infinite loops)
 
+USE_THREADING: bool = _get_env("USE_THREADING", "true").lower() in ("true", "1", "yes")
+
 
 
 RSS_URL: str = _get_env(
