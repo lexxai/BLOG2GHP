@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Sequence
 
-from .config import BASE_DIR, POSTS_DIR
+from blog_sync.config import BASE_DIR, POSTS_DIR
 
 
 _slug_invalid_chars = re.compile(r"[^\w\s-]", re.UNICODE)

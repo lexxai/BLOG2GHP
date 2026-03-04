@@ -43,7 +43,8 @@ def fetch_feed(url: str, client: httpx.Client | None = None) -> List[ParsedEntry
     """
 
     if client is None:
-        client = get_client()
+        assert ValueError("Client undefined")
+        return []
 
     response = client.get(url, timeout=15)
     response.raise_for_status()
