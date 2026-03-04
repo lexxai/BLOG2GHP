@@ -43,38 +43,82 @@ def _rewrite_internal_links(soup: BeautifulSoup) -> None:
         rest = href[match.end() :]
         a["href"] = f"https://{NEW_DOMAIN}{rest}"
 
+
 def _extract_image_tables(soup):
     """Convert Blogger image tables to cleaner figure+caption format."""
-    
-    for tbody in soup.find_all("tbody"):
-        rows = tbody.find_all("tr")
-        
-        # Check if it's an image table (image row + caption row)
+
+    tables_to_replace = []
+
+    for table in soup.find_all("table"):
+        tbody = table.find("tbody")
+        if not tbody:
+            continue
+
+        rows = tbody.find_all("tr", recursive=False)
+
         if len(rows) == 2:
-            img_cell = rows[0].find("img")
-            caption_cell = rows[1].find("td", class_="tr-caption")
-            
-            if img_cell and caption_cell:
-                # Create a cleaner structure
-                figure = soup.new_tag("figure")
-                
-                # Keep the link if it exists
+            img = rows[0].find("img")
+            caption_td = rows[1].find("td", class_="tr-caption")
+
+            if img and caption_td:
+                # Create a paragraph container
+                container = soup.new_tag("p")
+
+                # Get the link or just the img
                 link = rows[0].find("a")
                 if link:
-                    figure.append(link)
+                    new_link = soup.new_tag("a", href=link.get("href"))
+                    new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
+                    new_link.append(new_img)
+                    container.append(new_link)
                 else:
-                    figure.append(img_cell)
-                
-                # Add caption
-                figcaption = soup.new_tag("figcaption")
-                figcaption.string = caption_cell.get_text(strip=True)
-                figure.append(figcaption)
-                
-                # Replace table with figure
-                tbody.parent.replace_with(figure)
+                    new_img = soup.new_tag("img", src=img.get("src"), alt=img.get("alt", ""))
+                    container.append(new_img)
+
+                # Add space + caption as emphasized text (no br)
+                container.append(" ")  # Just a space
+                em = soup.new_tag("em")
+                em.string = caption_td.get_text(strip=True)
+                container.append(em)
+
+                tables_to_replace.append((table, container))
+
+    # Replace all at once
+    for table, container in tables_to_replace:
+        table.replace_with(container)
+
+
 
 def md(soup, **options):
     return markdownify.MarkdownConverter(**options).convert_soup(soup)
+
+
+def analyze_blogger_images(soup):
+    """Fetch and analyze image table structures from Blogger."""
+
+    # Find all tables
+    tables = soup.find_all("table")
+    print(f"Found {len(tables)} tables\n")
+
+    for i, table in enumerate(tables, 1):
+        print(f"=== TABLE {i} ===")
+        tbody = table.find("tbody")
+        if not tbody:
+            print("  No tbody\n")
+            continue
+
+        rows = tbody.find_all("tr", recursive=False)
+        print(f"  Rows: {len(rows)}")
+
+        for j, row in enumerate(rows, 1):
+            print(f"  Row {j}:")
+            img = row.find("img")
+            caption = row.find("td", class_="tr-caption")
+            print(f"    - Has img: {img is not None}")
+            print(f"    - Has caption: {caption is not None}")
+            if caption:
+                print(f"    - Caption text: {caption.get_text(strip=True)}")
+        print()
 
 
 def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, str]:
@@ -92,8 +136,7 @@ def transform_entry_html(html: str, dest: Path, client) -> Tuple[BeautifulSoup, 
     md_body = md(
         soup,
         heading_style="ATX",  # Use # headers
-        keep_inline_images_in=["td"],  # Keep <img> tags inside <td>
-        # convert=["img"],
+        # keep_inline_images_in=["td", "table"]
     )
 
     return soup, md_body
