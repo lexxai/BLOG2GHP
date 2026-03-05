@@ -61,16 +61,13 @@ def _rewrite_internal_links(soup: BeautifulSoup, history_tree_data: dict = None)
         u_split = urlsplit(href)
         hostname = u_split.hostname.lower()
         pathname = u_split.path
-        logger.debug(f"Checking link: {href} -> {hostname}")
         if hostname not in OLD_DOMAINS:
             continue
-        logger.debug(f"********** Rewriting link: {href}")
         if pathname == "/":
             rest = pathname
         else:
             rest = history_tree_data.get(href)
         if rest:
-            logger.debug(f"############### Rewriting link: {href} -> {rest}")
             a["href"] = rest
 
 

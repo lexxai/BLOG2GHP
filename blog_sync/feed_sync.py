@@ -281,8 +281,8 @@ class FeedSync:
             if self.dry_run:
                 logger.debug(f"Would process entry with original link: {original_link} {new_link}")
                 continue
-            else:
-                logger.debug(f"Processing entry with original link: {original_link} {new_link}")
+            # else:
+                # logger.debug(f"Processing entry with original link: {original_link} {new_link}")
 
             if original_link and new_link and original_link not in self.history_tree_data:
                 self.history_tree_data[original_link] = new_link
