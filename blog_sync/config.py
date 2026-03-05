@@ -31,6 +31,9 @@ RSS_URL: str = _get_env(
     f"https://{BASE_URL}/feeds/posts/default?alt=rss",
 )
 
+BUILD_HISTORY_TREE_ENABLE: bool = _get_env("BUILD_HISTORY_TREE_ENABLE", "1").lower() in ("true", "1", "yes")
+BUILD_HISTORY_TREE_DEPTH: int = int(_get_env("BUILD_HISTORY_TREE_DEPTH", str(SAFETY_LIMIT)))
+
 ENABLE_REWRITE_LINKS: bool = _get_env("ENABLE_REWRITE_LINKS", "false").lower() in ("true", "1", "yes")
 OLD_DOMAIN: str = _get_env("BLOG_OLD_DOMAIN", BASE_URL)
 NEW_DOMAIN: str = _get_env("BLOG_NEW_DOMAIN", f"{OLD_DOMAIN.split('.')[0]}.github.io")
@@ -38,6 +41,7 @@ NEW_DOMAIN: str = _get_env("BLOG_NEW_DOMAIN", f"{OLD_DOMAIN.split('.')[0]}.githu
 # Content/output paths (relative to repo root)
 POSTS_DIR: Path = Path(_get_env("BLOG_POSTS_DIR", "_posts"))
 IMG_DIR: Path = Path(_get_env("BLOG_IMG_DIR", "assets/images/blog"))
+HISTORY_TREE_DIR: Path = Path(_get_env("HISTORY_TREE_DIR", "assets/history_tree"))
 
 
 def get_rss_url(start_index: int = 1, max_results: int | None = None) -> str:
@@ -49,6 +53,8 @@ def ensure_directories(base_path: Path) -> None:
     """Create required local directories if they do not exist."""
     (BASE_DIR / base_path / POSTS_DIR).mkdir(parents=True, exist_ok=True)
     (BASE_DIR / base_path / IMG_DIR).mkdir(parents=True, exist_ok=True)
+    if BUILD_HISTORY_TREE_ENABLE:
+        (BASE_DIR / base_path / HISTORY_TREE_DIR).mkdir(parents=True, exist_ok=True)
 
 
 def setup_logging() -> None:
