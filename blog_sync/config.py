@@ -34,9 +34,8 @@ RSS_URL: str = _get_env(
 BUILD_HISTORY_TREE_ENABLE: bool = _get_env("BUILD_HISTORY_TREE_ENABLE", "1").lower() in ("true", "1", "yes")
 BUILD_HISTORY_TREE_DEPTH: int = int(_get_env("BUILD_HISTORY_TREE_DEPTH", str(SAFETY_LIMIT)))
 
-ENABLE_REWRITE_LINKS: bool = _get_env("ENABLE_REWRITE_LINKS", "false").lower() in ("true", "1", "yes")
-OLD_DOMAIN: str = _get_env("BLOG_OLD_DOMAIN", BASE_URL)
-NEW_DOMAIN: str = _get_env("BLOG_NEW_DOMAIN", f"{OLD_DOMAIN.split('.')[0]}.github.io")
+ENABLE_REWRITE_LINKS: bool = _get_env("ENABLE_REWRITE_LINKS", "true").lower() in ("true", "1", "yes")
+OLD_DOMAINS: set = set(_get_env("BLOG_OLD_DOMAINS", BASE_URL).split(","))
 
 # Content/output paths (relative to repo root)
 POSTS_DIR: Path = Path(_get_env("BLOG_POSTS_DIR", "_posts"))

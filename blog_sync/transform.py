@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-import re
 from typing import Tuple
+from urllib.parse import urlsplit
 
-from bs4 import BeautifulSoup
 import markdownify
+from bs4 import BeautifulSoup
 
-from blog_sync.config import ENABLE_REWRITE_LINKS, MAX_THREADS_WORKERS, OLD_DOMAIN, NEW_DOMAIN
+from blog_sync.config import ENABLE_REWRITE_LINKS, MAX_THREADS_WORKERS, OLD_DOMAINS
 from blog_sync.downloader import download_image
 
 logger = logging.getLogger(__name__)
 
 
-_domain_pattern = re.compile(rf"^(https?:)?//{re.escape(OLD_DOMAIN)}", re.IGNORECASE)
 
 
 def _image_processing(img, dest: Path, client):
@@ -44,7 +43,7 @@ def _rewrite_images(soup: BeautifulSoup, dest: Path, client, use_threading: bool
             _image_processing(img, dest, client)
 
 
-def _rewrite_internal_links(soup: BeautifulSoup) -> None:
+def _rewrite_internal_links(soup: BeautifulSoup, history_tree_data: dict = None) -> None:
     """
     Rewrite links that point to the old domain so that they use the new domain.
 
@@ -53,15 +52,26 @@ def _rewrite_internal_links(soup: BeautifulSoup) -> None:
         - https://OLD_DOMAIN/...
         - //OLD_DOMAIN/...
     """
+    if not ENABLE_REWRITE_LINKS or not history_tree_data:
+        # logger.debug("Rewriting links is disabled")
+        return
+
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        match = _domain_pattern.match(href)  # type: ignore # noqa
-        if not match:
+        u_split = urlsplit(href)
+        hostname = u_split.hostname.lower()
+        pathname = u_split.path
+        logger.debug(f"Checking link: {href} -> {hostname}")
+        if hostname not in OLD_DOMAINS:
             continue
-
-        # Preserve path/query after the domain and normalize to https://NEW_DOMAIN
-        rest = href[match.end() :]
-        a["href"] = f"https://{NEW_DOMAIN}{rest}"
+        logger.debug(f"********** Rewriting link: {href}")
+        if pathname == "/":
+            rest = pathname
+        else:
+            rest = history_tree_data.get(href)
+        if rest:
+            logger.debug(f"############### Rewriting link: {href} -> {rest}")
+            a["href"] = rest
 
 
 def _extract_image_tables_figure(soup):
@@ -185,7 +195,7 @@ def analyze_blogger_images(soup):
         print()
 
 
-def transform_entry_html(html: str, dest: Path, client, use_threading: bool = False) -> Tuple[BeautifulSoup, str]:
+def transform_entry_html(html: str, dest: Path, client, use_threading: bool = False, history_tree_data: dict = None) -> Tuple[BeautifulSoup, str]:
     """
     Parse an entry's HTML, download/rewire images and links, and
     return both the BeautifulSoup tree and its Markdown representation.
@@ -194,8 +204,7 @@ def transform_entry_html(html: str, dest: Path, client, use_threading: bool = Fa
 
     _extract_image_tables(soup)
     _rewrite_images(soup, dest=dest, client=client, use_threading=use_threading)
-    if ENABLE_REWRITE_LINKS:
-        _rewrite_internal_links(soup)
+    _rewrite_internal_links(soup, history_tree_data=history_tree_data)
 
     # md_body = markdownify.markdownify(str(soup), heading_style="ATX")
     md_body = md(

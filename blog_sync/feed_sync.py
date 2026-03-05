@@ -97,7 +97,7 @@ class FeedSync:
             description = (item.findtext("description") or "").strip()
 
             # Blogger labels appear as <category term="Label" .../>
-            tags = [c.get("term") for c in item.findall("category") if c.get("term")]
+            tags = [text for c in item.findall("category") if (text:=c.text.strip())]
 
             entries.append(
                 ParsedEntry(
@@ -128,7 +128,7 @@ class FeedSync:
             logger.info(f"Processing: {entry.title} -> {filename}")
 
         soup, md_body = transform_entry_html(
-            entry.description, dest=self.base_path, client=self.client, use_threading=self.use_threading
+            entry.description, dest=self.base_path, client=self.client, use_threading=self.use_threading, history_tree_data=self.history_tree_data
         )
         tags = self._extract_tags(entry)
 
