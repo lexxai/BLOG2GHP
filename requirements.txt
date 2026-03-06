@@ -34,6 +34,8 @@ lxml==6.0.2
     # via blog2ghp
 markdownify==1.2.2
     # via blog2ghp
+orjson==3.11.7
+    # via blog2ghp
 pyreadline3==3.5.4 ; sys_platform == 'win32'
     # via humanfriendly
 python-dotenv==1.2.2

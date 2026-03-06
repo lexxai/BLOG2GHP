@@ -18,13 +18,21 @@ def slugify(title: str) -> str:
     return _slug_whitespace.sub("-", cleaned)
 
 
-def generate_post_filename(date: datetime, title: str) -> Path:
+def generate_post_path_name(date: datetime, title: str) -> str:
     """
     Build a Jekyll-compatible post filename:
         YYYY-MM-DD-slug.md
     """
     slug = slugify(title)
-    name = f"{date.strftime('%Y-%m-%d')}-{slug}.md"
+    return f"{date.strftime('%Y-%m-%d')}-{slug}.md"
+
+
+def generate_post_filename(date: datetime, title: str) -> Path:
+    """
+    Build a Jekyll-compatible post filename:
+        YYYY-MM-DD-slug.md
+    """
+    name = generate_post_path_name(date, title)
     return POSTS_DIR / name
 
 
