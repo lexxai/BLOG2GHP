@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 import markdownify
 from bs4 import BeautifulSoup
 
-from blog_sync.config import ENABLE_REWRITE_LINKS, MAX_THREADS_WORKERS, OLD_DOMAINS
+from blog_sync.config import ENABLE_REWRITE_LINKS, MAX_THREADS_WORKERS, OLD_DOMAINS, OLD_DOMAINS_SET
 from blog_sync.downloader import download_image
 
 logger = logging.getLogger(__name__)
@@ -46,29 +46,22 @@ def _rewrite_images(soup: BeautifulSoup, dest: Path, client, use_threading: bool
 def _rewrite_internal_links(soup: BeautifulSoup, history_tree_data: dict = None) -> None:
     """
     Rewrite links that point to the old domain so that they use the new domain.
-
-    Handles:
-        - http://OLD_DOMAIN/...
-        - https://OLD_DOMAIN/...
-        - //OLD_DOMAIN/...
     """
     if not ENABLE_REWRITE_LINKS or not history_tree_data:
         # logger.debug("Rewriting links is disabled")
         return
-
+    old_domain = OLD_DOMAINS[0]
     for a in soup.find_all("a", href=True):
         href = a["href"]
         u_split = urlsplit(href)
-        hostname = u_split.hostname.lower()
+        hostname = u_split.hostname
         pathname = u_split.path
-        if hostname not in OLD_DOMAINS:
+        if hostname is not None and hostname not in OLD_DOMAINS_SET:
             continue
-        if pathname == "/":
-            rest = pathname
-        else:
-            rest = history_tree_data.get(href)
-        if rest:
-            a["href"] = rest
+        href = f"https://{old_domain}/{pathname.lstrip('/')}"
+        rest = history_tree_data.get(href)
+        a["href"] = rest if rest else href
+
 
 
 def _extract_image_tables_figure(soup):
