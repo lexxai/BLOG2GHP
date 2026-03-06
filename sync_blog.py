@@ -41,6 +41,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print detailed progress information.",
     )
+    parser.add_argument(
+        "--only-history",
+        action="store_true",
+        help="Do not write any posts files, just build the history of the blog.",
+    )
     return parser
 
 
@@ -50,7 +55,11 @@ def main() -> None:
     try:
         with http_connection.get_client() as client:
             feed_sync = FeedSync(client, dest=args.dest, limit=args.limit, dry_run=args.dry_run, verbose=args.verbose)
-            feed_sync.process_sync()
+            if args.only_history:
+                logger.info("Only building history, not writing posts files")
+                feed_sync.process_history_build()
+            else:
+                feed_sync.process_sync()
     except KeyboardInterrupt:
         logger.info("Keyboard Ctrl-C")
 
